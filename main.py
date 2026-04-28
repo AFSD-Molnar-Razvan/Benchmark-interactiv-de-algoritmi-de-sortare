@@ -30,7 +30,7 @@ class InfoDesenare:
         self.latime = latime
         self.inaltime = inaltime
         self.fereastra = pygame.display.set_mode((latime, inaltime))
-        pygame.display.set_caption("Benchmark Sortare - Molnar si Roman (Anul 2)")
+        pygame.display.set_caption("Benchmark Sortare - Molnar si Roman")
         self.setare_lista(lista_numere)
 
     def setare_lista(self, lista_numere):
