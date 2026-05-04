@@ -1,13 +1,13 @@
 import pygame
 import random
 import math
+import time
 
-# Initializam modulul pygame
 pygame.init()
 
 
 class InfoDesenare:
-    # Definim culorile in RGB
+    # culori rgb
     NEGRU = 0, 0, 0
     ALB = 255, 255, 255
     VERDE = 0, 255, 0
@@ -23,6 +23,7 @@ class InfoDesenare:
     FONT_MIC = pygame.font.SysFont('comicsans', 20)
     FONT_MARE = pygame.font.SysFont('comicsans', 30)
 
+    # spatiere interfata
     PADDING_LATERAL = 100
     PADDING_SUS = 150
 
@@ -33,29 +34,45 @@ class InfoDesenare:
         pygame.display.set_caption("Benchmark Sortare - Molnar si Roman (Anul 2)")
         self.setare_lista(lista_numere)
 
+        # init stats
+        self.comparatii = 0
+        self.interschimbari = 0
+        self.timp_start = 0
+        self.timp_scurs = 0
+
     def setare_lista(self, lista_numere):
         self.lista = lista_numere
         self.val_min = min(lista_numere)
         self.val_max = max(lista_numere)
+
+        # calculam latimea si inaltimea dinamica in functie de cate elemente avem
         self.latime_bloc = round((self.latime - self.PADDING_LATERAL) / len(lista_numere))
         self.inaltime_bloc = math.floor((self.inaltime - self.PADDING_SUS) / (self.val_max - self.val_min))
         self.start_x = self.PADDING_LATERAL // 2
+
+        # resetam statisticile pt lista noua
+        self.comparatii = 0
+        self.interschimbari = 0
+        self.timp_scurs = 0
 
 
 def desenare_interfata(info, nume_algoritm, crescator):
     info.fereastra.fill(info.CULOARE_FUNDAL)
 
-    # Afisam algoritmul selectat si directia (Crescator/Descrescator)
     sens = "Crescator" if crescator else "Descrescator"
     titlu = info.FONT_MARE.render(f"{nume_algoritm} - {sens}", 1, info.VERDE)
     info.fereastra.blit(titlu, (info.latime / 2 - titlu.get_width() / 2, 5))
 
-    # Meniul de controale
     controale = info.FONT_MIC.render("R - Reset | SPACE - Start | A - Crescator | D - Descrescator", 1, info.NEGRU)
     info.fereastra.blit(controale, (info.latime / 2 - controale.get_width() / 2, 45))
 
     sortari = info.FONT_MIC.render("B - Bubble Sort | I - Insertion Sort", 1, info.NEGRU)
     info.fereastra.blit(sortari, (info.latime / 2 - sortari.get_width() / 2, 75))
+
+    # randare stats
+    text_stats = f"Timp: {info.timp_scurs:.2f}s | Comparatii: {info.comparatii} | Interschimbari: {info.interschimbari}"
+    stats = info.FONT_MIC.render(text_stats, 1, info.ROSU)
+    info.fereastra.blit(stats, (info.latime / 2 - stats.get_width() / 2, 110))
 
     desenare_bare(info)
     pygame.display.update()
@@ -64,11 +81,18 @@ def desenare_interfata(info, nume_algoritm, crescator):
 def desenare_bare(info, pozitii_colorate={}, curata_fundal=False):
     lista = info.lista
 
-    # Daca desenam IN TIMPUL sortarii, curatam doar zona cu bare
+    # daca facem update in timpul sortarii, stergem doar zona cu bare ca sa nu avem flicker la text
     if curata_fundal:
         zona_curatare = (info.PADDING_LATERAL // 2, info.PADDING_SUS,
                          info.latime - info.PADDING_LATERAL, info.inaltime - info.PADDING_SUS)
         pygame.draw.rect(info.fereastra, info.CULOARE_FUNDAL, zona_curatare)
+
+        # update separat pt stats
+        zona_stats = (0, 110, info.latime, 35)
+        pygame.draw.rect(info.fereastra, info.CULOARE_FUNDAL, zona_stats)
+        text_stats = f"Timp: {info.timp_scurs:.2f}s | Comparatii: {info.comparatii} | Interschimbari: {info.interschimbari}"
+        stats = info.FONT_MIC.render(text_stats, 1, info.ROSU)
+        info.fereastra.blit(stats, (info.latime / 2 - stats.get_width() / 2, 110))
 
     for i, valoare in enumerate(lista):
         x = info.start_x + i * info.latime_bloc
@@ -91,9 +115,15 @@ def bubble_sort(info, crescator=True):
             numar1 = lista[j]
             numar2 = lista[j + 1]
 
+            info.comparatii += 1
+
             if (numar1 > numar2 and crescator) or (numar1 < numar2 and not crescator):
                 lista[j], lista[j + 1] = lista[j + 1], lista[j]
+                info.interschimbari += 1
+
+                # punem rosu si verde pe elementele curent selectate
                 desenare_bare(info, {j: info.VERDE, j + 1: info.ROSU}, True)
+                # pauza pt animatie
                 yield True
     return lista
 
@@ -103,6 +133,7 @@ def insertion_sort(info, crescator=True):
     for i in range(1, len(lista)):
         curent = lista[i]
         while True:
+            info.comparatii += 1
             ascendent_ok = i > 0 and lista[i - 1] > curent and crescator
             descendent_ok = i > 0 and lista[i - 1] < curent and not crescator
 
@@ -112,6 +143,7 @@ def insertion_sort(info, crescator=True):
             lista[i] = lista[i - 1]
             i = i - 1
             lista[i] = curent
+            info.interschimbari += 1
 
             desenare_bare(info, {i - 1: info.VERDE, i: info.ROSU}, True)
             yield True
@@ -142,19 +174,20 @@ def main():
     nume_algoritm = "Bubble Sort"
     generator_sortare = None
 
-    # --- INITIALIZARE SUNET ---
+    # setup sunet
     pygame.mixer.init()
     try:
         sunet = pygame.mixer.Sound("click.wav")
         sunet.set_volume(0.3)
     except FileNotFoundError:
-        print("Atentie: Fisierul click.wav nu a fost gasit in folder!")
-    # --------------------------
+        print("Atentie: Fisierul click.wav lipseste!")
 
     while ruleaza:
         ceas.tick(60)
 
         if sortare:
+            # actualizare cronometru daca ruleaza algoritmul
+            info.timp_scurs = time.time() - info.timp_start
             try:
                 next(generator_sortare)
             except StopIteration:
@@ -167,15 +200,12 @@ def main():
                 ruleaza = False
 
             if event.type == pygame.KEYDOWN:
-
-                # --- REDARE SUNET OPTIMIZATA ---
                 taste_valide = [pygame.K_r, pygame.K_SPACE, pygame.K_a, pygame.K_d, pygame.K_b, pygame.K_i]
                 if event.key in taste_valide:
                     try:
                         sunet.play()
                     except:
                         pass
-                # -------------------------------
 
                 if event.key == pygame.K_r:
                     lista = generare_lista_start(n, val_min, val_max)
@@ -184,6 +214,11 @@ def main():
 
                 elif event.key == pygame.K_SPACE and not sortare:
                     sortare = True
+                    # resetare contoare cand incepem
+                    info.comparatii = 0
+                    info.interschimbari = 0
+                    info.timp_start = time.time()
+
                     generator_sortare = algoritm_sortare(info, crescator)
 
                 elif event.key == pygame.K_a and not sortare:
