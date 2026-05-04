@@ -38,7 +38,7 @@ Aplicația se distinge prin faptul că permite vizualizarea animației de sortar
 * **Imbunătățire Tehnică:** Am transformat algoritmii de sortare în generatori (folosind `yield`). Astfel, după fiecare mutare, algoritmul cedează controlul înapoi către Pygame pentru a desena noul cadru, evitând blocarea ecranului.
 * Am adăugat evidențierea vizuală: barele care sunt comparate la un moment dat devin roșii/verzi temporar.
 
-⬜ **Săptămâna 5-6: UI On-Screen și Sistemul de Metrici**
+✅ **Săptămâna 5-6: UI On-Screen și Sistemul de Metrici**
 * Vom adăuga text renderizat pe ecran (`pygame.font`) pentru a afișa controalele: *Apasă SPACE pentru Start, R pentru Reset, A pentru Ascendent*.
 * Vom implementa contoarele interne. Algoritmii (generatorii) vor returna un dicționar sau un tuplu la fiecare pas, conținând starea listei + numărul curent de `comparisons` și `swaps`.
 * Vom afișa aceste contoare live în partea de sus a ecranului.
